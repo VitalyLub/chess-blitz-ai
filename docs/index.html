@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chess Blitz AI</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1><a href="#">♞ Chess Blitz AI</a></h1>
+    <nav><a href="#" class="btn">Games</a></nav>
+  </header>
+
+  <main>
+    <!-- List / lobby view -->
+    <section id="list-view">
+      <div class="panel">
+        <h2>New game</h2>
+        <form id="new-game-form" class="new-game">
+          <fieldset class="side">
+            <legend>White</legend>
+            <label>Provider <select id="w-provider"></select></label>
+            <label>Model <select id="w-model"></select></label>
+            <label class="thinking" id="w-thinking-wrap" hidden>Thinking
+              <select id="w-thinking"><option value="fast">fast</option><option value="adaptive">adaptive</option></select>
+            </label>
+            <label class="mockopt" id="w-mock-wrap">Illegal prob
+              <input type="number" id="wprob" value="0" min="0" max="1" step="0.05" />
+            </label>
+          </fieldset>
+          <fieldset class="side">
+            <legend>Black</legend>
+            <label>Provider <select id="b-provider"></select></label>
+            <label>Model <select id="b-model"></select></label>
+            <label class="thinking" id="b-thinking-wrap" hidden>Thinking
+              <select id="b-thinking"><option value="fast">fast</option><option value="adaptive">adaptive</option></select>
+            </label>
+            <label class="mockopt" id="b-mock-wrap">Illegal prob
+              <input type="number" id="bprob" value="0" min="0" max="1" step="0.05" />
+            </label>
+          </fieldset>
+          <fieldset class="side">
+            <legend>Clock</legend>
+            <label>Base (s) <input type="number" id="base" value="180" min="1" /></label>
+            <label>Increment (s) <input type="number" id="inc" value="2" min="0" /></label>
+          </fieldset>
+          <button type="submit" class="btn primary">Start game</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Prompts sent to the AI</h2>
+        <p id="prompts-note" class="muted"></p>
+        <details>
+          <summary>System prompt</summary>
+          <pre id="system-prompt" class="prompt"></pre>
+        </details>
+        <details>
+          <summary>Per-turn prompt (example — starting position)</summary>
+          <pre id="move-prompt" class="prompt"></pre>
+        </details>
+      </div>
+
+      <div class="panel">
+        <h2>Live games</h2>
+        <table id="live-table"><thead>
+          <tr><th>Players</th><th>Time</th><th>Status</th><th></th></tr>
+        </thead><tbody></tbody></table>
+        <p id="no-live" class="muted">No live games.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Finished games</h2>
+        <table id="finished-table"><thead>
+          <tr><th>Players</th><th>Time</th><th>Result</th><th>Think (W/B)</th><th>Cost (W/B)</th><th>Why</th><th></th></tr>
+        </thead><tbody></tbody></table>
+        <p id="no-finished" class="muted">No finished games yet.</p>
+      </div>
+    </section>
+
+    <!-- Game view (live or replay) -->
+    <section id="game-view" hidden>
+      <div class="game-grid">
+        <div class="board-col">
+          <div class="clock" id="clock-black">3:00</div>
+          <div id="board" class="board"></div>
+          <div class="clock" id="clock-white">3:00</div>
+          <div id="material" class="material"></div>
+        </div>
+        <div class="info-col">
+          <div class="panel">
+            <h2 id="game-title">Game</h2>
+            <p id="game-status" class="status"></p>
+            <p id="game-reasoning" class="reasoning"></p>
+            <p id="game-think" class="muted"></p>
+            <p id="game-cost" class="muted"></p>
+          </div>
+          <div class="panel controls" id="replay-controls" hidden>
+            <button id="btn-start" class="btn">⏮</button>
+            <button id="btn-prev" class="btn">◀</button>
+            <button id="btn-play" class="btn">▶ Auto</button>
+            <button id="btn-next" class="btn">▶</button>
+            <button id="btn-end" class="btn">⏭</button>
+            <span id="ply-indicator" class="muted"></span>
+          </div>
+          <div class="panel moves-panel">
+            <h2>Moves</h2>
+            <ol id="moves"></ol>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
