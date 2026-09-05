@@ -15,7 +15,11 @@ from typing import Callable
 
 logger = logging.getLogger("chess_blitz.reconnect")
 
-RESPONSE_TIMEOUT_SEC = 30.0  # wait this long for a response before retrying
+# Wait this long for a response before retrying. Generous on purpose: reasoning
+# models (o4-mini, gpt-5.x, Claude adaptive) can legitimately take well over 30s
+# to answer, and cutting that off would treat real thinking as a failure. A true
+# hang is still caught — just after a longer wait — and the stall is refunded.
+RESPONSE_TIMEOUT_SEC = 90.0
 MAX_RECONNECTS = 3           # extra attempts after the first (initial + 3 = 4 tries)
 
 
@@ -39,6 +43,11 @@ def call_with_reconnect(
             response = make_call(timeout)
             return response, time.monotonic() - start, attempt
         except retry_errors as exc:
+            # Permanent billing/quota errors won't recover — fail fast instead of
+            # burning the whole retry budget on them.
+            msg = str(exc).lower()
+            if any(k in msg for k in ("insufficient_quota", "credit_balance", "billing")):
+                raise
             last_err = exc
             attempt += 1
             if on_retry is not None:

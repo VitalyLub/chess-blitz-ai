@@ -45,6 +45,13 @@ def build_why(
             f"{_cap(winner_color)} ({winner_model}) won: {loser_model} forfeited "
             f"after a second illegal move."
         )
+    if termination == "adjudicated":
+        if winner_color:
+            return (
+                f"{_cap(winner_color)} ({winner_model}) won by adjudication "
+                f"(material) at the move cap after {total_moves} moves."
+            )
+        return f"Draw by adjudication at the move cap after {total_moves} moves."
     phrase = _DRAW_PHRASES.get(termination, "a draw")
     return f"Draw by {phrase} after {total_moves} moves."
 

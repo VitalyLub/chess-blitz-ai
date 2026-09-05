@@ -43,6 +43,11 @@ def _other(color: str) -> str:
     return "black" if color == "white" else "white"
 
 
+_PIECE_VALUES = {
+    chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, chess.ROOK: 5, chess.QUEEN: 9,
+}
+
+
 class BlitzGame:
     def __init__(
         self,
@@ -52,11 +57,15 @@ class BlitzGame:
         game_id: Optional[str] = None,
         on_event: Optional[EventCallback] = None,
         realtime: bool = False,
+        max_plies: Optional[int] = None,
     ) -> None:
         self.config = config
         self.game_id = game_id or uuid.uuid4().hex[:12]
         self.on_event = on_event
         self.realtime = realtime
+        # Safety valve: if a game reaches this many plies without ending, it's
+        # adjudicated by naive material (used by long tournaments to bound time).
+        self.max_plies = max_plies
 
         self.board = chess.Board()
         self.agents: dict[str, Agent] = {"white": white, "black": black}
@@ -127,6 +136,8 @@ class BlitzGame:
                     if board_outcome.winner is None
                     else ("white" if board_outcome.winner else "black")
                 )
+            elif self.max_plies and len(self.moves) >= self.max_plies:
+                termination, winner_color = self._adjudicate()
 
         result = self._finalize(termination, winner_color)
         storage.save_game(self.config, result, self.moves)
@@ -151,6 +162,16 @@ class BlitzGame:
             move_uci = decision.move
             reasoning = decision.reasoning
             think_time = decision.think_time
+
+            # Log the actual response time and the move for real API agents
+            # (mock has no tokens). Shows slow reasoning vs. a reconnect stall.
+            if decision.input_tokens or decision.output_tokens:
+                extra = (
+                    f" ({decision.retries} reconnect(s); {call_elapsed:.0f}s wall)"
+                    if decision.retries else ""
+                )
+                logger.info("%s (%s) responded in %.1fs: %s%s",
+                            agent.name, color, think_time, move_uci, extra)
 
             # In live mode, pace the turn so its total wall-clock ≈ think_time.
             # Real agents already blocked for ~think_time (API latency), so sleep
@@ -257,6 +278,23 @@ class BlitzGame:
             except ValueError:
                 continue
         return None
+
+    def _adjudicate(self) -> tuple[str, Optional[str]]:
+        """Decide a length-capped game by naive material (>=3 pts wins, else draw)."""
+        white = sum(
+            len(self.board.pieces(pt, chess.WHITE)) * v
+            for pt, v in _PIECE_VALUES.items()
+        )
+        black = sum(
+            len(self.board.pieces(pt, chess.BLACK)) * v
+            for pt, v in _PIECE_VALUES.items()
+        )
+        diff = white - black
+        if diff >= 3:
+            return ("adjudicated", "white")
+        if diff <= -3:
+            return ("adjudicated", "black")
+        return ("adjudicated", None)
 
     # -- result ------------------------------------------------------------ #
     def _finalize(
